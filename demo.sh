@@ -90,6 +90,7 @@ check_prerequisites() {
         fi
     done
     
+    if [ $missing -eq 1 ]; then
         print_error "Missing prerequisites. Please install them first."
         exit 1
     fi
