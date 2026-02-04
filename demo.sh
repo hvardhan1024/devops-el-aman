@@ -110,7 +110,7 @@ cmd_setup() {
     print_done "Backend deployed"
     
     print_step "8" "Getting backend URL"
-    BACKEND_URL="http://$(minikube ip):30080"
+    BACKEND_URL="http://localhost:30080"
     echo "Backend URL: $BACKEND_URL"
     
     print_step "9" "Updating frontend configuration"
@@ -128,7 +128,7 @@ cmd_setup() {
     wait_for_deployment "frontend-blue" "frontend"
     print_done "Frontend deployed"
     
-    FRONTEND_URL="http://$(minikube ip):30081"
+    FRONTEND_URL="http://localhost:30081"
     
     print_header "SETUP COMPLETE"
     echo ""
@@ -174,7 +174,7 @@ cmd_green() {
         -n backend
     print_done "Traffic switched to Green"
     
-    FRONTEND_URL=$(minikube service frontend-lb -n frontend --url 2>/dev/null | head -1)
+    FRONTEND_URL="http://$(minikube ip):30081"
     
     print_header "SWITCH COMPLETE"
     echo ""
@@ -209,7 +209,7 @@ cmd_buggy() {
         -n backend
     print_done "Traffic switched to buggy Green"
     
-    FRONTEND_URL=$(minikube service frontend-lb -n frontend --url 2>/dev/null | head -1)
+    FRONTEND_URL="http://$(minikube ip):30081"
     
     print_header "BUGGY GREEN DEPLOYED"
     echo ""
@@ -240,7 +240,7 @@ cmd_rollback() {
     kubectl scale deployment/devops-el-green --replicas=0 -n backend
     print_done "Green deployment scaled down"
     
-    FRONTEND_URL=$(minikube service frontend-lb -n frontend --url 2>/dev/null | head -1)
+    FRONTEND_URL="http://$(minikube ip):30081"
     
     print_header "ROLLBACK COMPLETE"
     echo ""

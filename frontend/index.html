@@ -320,7 +320,8 @@
     </div>
 
     <script>
-        const BACKEND_URL = 'http://192.168.49.2:30080';
+        // Always call backend via localhost when using port-forward
+        const BACKEND_URL = 'http://localhost:30080';
 
         async function fetchStatus() {
             const t = Date.now();
