@@ -104,6 +104,9 @@ case "${1:-}" in
     
     echo "[3/3] Switching traffic to Green..."
     kubectl patch svc devops-el-lb -p '{"spec":{"selector":{"color":"green"}}}' -n backend
+
+    echo "[4/4] Scaling Blue down to 0..."
+    kubectl scale deployment/devops-el-blue --replicas=0 -n backend
     
     BACKEND_URL="http://localhost:30080"
     FRONTEND_URL="http://localhost:30081"
@@ -177,6 +180,7 @@ case "${1:-}" in
     echo "------------------------------------------------------------"
     
     kubectl patch svc devops-el-lb -p '{"spec":{"selector":{"color":"blue"}}}' -n backend
+    kubectl scale deployment/devops-el-blue --replicas=1 -n backend
     kubectl scale deployment/devops-el-green --replicas=0 -n backend
     
     FRONTEND_URL=$(minikube service frontend-lb -n frontend --url 2>/dev/null | head -1)

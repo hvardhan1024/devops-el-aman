@@ -171,6 +171,10 @@ cmd_green() {
         -p '{"spec":{"selector":{"color":"green"}}}' \
         -n backend
     print_done "Traffic switched to Green"
+
+    print_step "4" "Scaling down Blue deployment to avoid stale traffic"
+    kubectl scale deployment/devops-el-blue --replicas=0 -n backend
+    print_done "Blue scaled to 0"
     
     FRONTEND_URL="http://localhost:30081"
     
@@ -233,9 +237,10 @@ cmd_rollback() {
         -n backend
     print_done "Traffic switched to Blue"
     
-    print_step "2" "Scaling down Green deployment"
+    print_step "2" "Scaling deployments (Blue up, Green down)"
+    kubectl scale deployment/devops-el-blue --replicas=1 -n backend
     kubectl scale deployment/devops-el-green --replicas=0 -n backend
-    print_done "Green deployment scaled down"
+    print_done "Deployments scaled"
     
     FRONTEND_URL="http://localhost:30081"
     
