@@ -37,40 +37,34 @@ echo "    ./run-demo.sh reset    - Reset to Blue"
 echo ""
 echo "============================================================"
 
-# Use Minikube's Docker daemon
-eval $(minikube docker-env) 2>/dev/null || true
-
 case "${1:-}" in
   setup)
     echo ""
     echo "[PHASE 1] Setting up BLUE deployment..."
     echo "------------------------------------------------------------"
     
-    # Configure Docker for Minikube
-    eval $(minikube docker-env)
-    
     # Build blue
     echo "[1/5] Building Blue backend..."
     cd backend-blue
-    docker build -t backend:blue . --quiet
+    minikube image build -t backend:blue .
     cd ..
     
     # Build working green
     echo "[2/5] Building Green backend (working version)..."
     cd backend-green
-    docker build -t backend:green . --quiet
+    minikube image build -t backend:green .
     cd ..
     
     # Build buggy green
     echo "[3/5] Building Green backend (buggy version)..."
     cd backend-green-buggy
-    docker build -t backend:green-buggy . --quiet
+    minikube image build -t backend:green-buggy .
     cd ..
     
     # Build frontend
     echo "[4/5] Building Frontend..."
     cd frontend
-    docker build -t frontend:v1 . --quiet
+    minikube image build -t frontend:v1 .
     cd ..
     
     # Deploy

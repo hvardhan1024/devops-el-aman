@@ -79,9 +79,9 @@ cmd_setup() {
     fi
     print_done "Minikube is running"
     
-    print_step "2" "Configuring Docker to use Minikube's daemon"
-    eval $(minikube docker-env)
-    print_done "Docker configured for Minikube"
+    print_step "2" "Preparing build context for Minikube (containerd-safe)"
+    # Using Minikube's built-in image builder (works with containerd runtime)
+    print_done "Minikube image builder ready"
     
     print_step "3" "Creating Kubernetes namespaces"
     kubectl create namespace backend --dry-run=client -o yaml | kubectl apply -f -
@@ -90,17 +90,17 @@ cmd_setup() {
     
     print_step "4" "Building Blue backend image"
     cd "$SCRIPT_DIR/backend-blue"
-    docker build -t backend:blue . --quiet
+    minikube image build -t backend:blue .
     print_done "Blue backend image built"
     
     print_step "5" "Building Green backend image"
     cd "$SCRIPT_DIR/backend-green"
-    docker build -t backend:green . --quiet
+    minikube image build -t backend:green .
     print_done "Green backend image built"
     
     print_step "6" "Building Buggy Green backend image"
     cd "$SCRIPT_DIR/backend-green-buggy"
-    docker build -t backend:green-buggy . --quiet
+    minikube image build -t backend:green-buggy .
     print_done "Buggy Green backend image built"
     
     print_step "7" "Deploying backend to Kubernetes"
@@ -119,7 +119,7 @@ cmd_setup() {
     
     print_step "10" "Building frontend image"
     cd "$SCRIPT_DIR/frontend"
-    docker build -t frontend:v1 . --quiet
+    minikube image build -t frontend:v1 .
     print_done "Frontend image built"
     
     print_step "11" "Deploying frontend to Kubernetes"
