@@ -204,7 +204,7 @@ cmd_green() {
     
     print_step "3" "Switching service selector to Green"
     kubectl patch svc devops-el-lb \
-        -p '{"spec":{"selector":{"color":"green"}}}' \
+        -p '{"spec":{"selector":{"app":"devops-el","color":"green"}}}' \
         -n backend
     print_done "Traffic switched to Green"
 
@@ -248,7 +248,7 @@ cmd_buggy() {
     
     print_step "2" "Switching traffic to buggy Green"
     kubectl patch svc devops-el-lb \
-        -p '{"spec":{"selector":{"color":"green"}}}' \
+        -p '{"spec":{"selector":{"app":"devops-el","color":"green"}}}' \
         -n backend
     print_done "Traffic switched to buggy Green"
 
@@ -285,13 +285,14 @@ cmd_rollback() {
     
     print_step "1" "Switching service selector to Blue"
     kubectl patch svc devops-el-lb \
-        -p '{"spec":{"selector":{"color":"blue"}}}' \
+        -p '{"spec":{"selector":{"app":"devops-el","color":"blue"}}}' \
         -n backend
     print_done "Traffic switched to Blue"
     
     print_step "2" "Scaling deployments (Blue up, Green down)"
     kubectl scale deployment/devops-el-blue --replicas=1 -n backend
     kubectl scale deployment/devops-el-green --replicas=0 -n backend
+    wait_for_deployment "devops-el-blue" "backend"
     print_done "Deployments scaled"
 
     print_step "3" "Verifying responses from backend"
