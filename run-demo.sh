@@ -76,8 +76,8 @@ case "${1:-}" in
     kubectl rollout status deployment/devops-el-blue -n backend --timeout=60s
     kubectl rollout status deployment/frontend-blue -n frontend --timeout=60s
     
-    BACKEND_URL="http://$(minikube ip):30080"
-    FRONTEND_URL="http://$(minikube ip):30081"
+    BACKEND_URL="http://localhost:30080"
+    FRONTEND_URL="http://localhost:30081"
     
     echo ""
     echo "[DONE] Blue is running!"
@@ -105,8 +105,8 @@ case "${1:-}" in
     echo "[3/3] Switching traffic to Green..."
     kubectl patch svc devops-el-lb -p '{"spec":{"selector":{"color":"green"}}}' -n backend
     
-    BACKEND_URL="http://$(minikube ip):30080"
-    FRONTEND_URL="http://$(minikube ip):30081"
+    BACKEND_URL="http://localhost:30080"
+    FRONTEND_URL="http://localhost:30081"
     
     echo ""
     echo "[DONE] Traffic switched to GREEN (working version)!"
@@ -127,8 +127,8 @@ case "${1:-}" in
     kubectl set image deployment/devops-el-green devops-el=backend:green-buggy -n backend
     kubectl rollout status deployment/devops-el-green -n backend --timeout=60s
     
-    BACKEND_URL="http://$(minikube ip):30080"
-    FRONTEND_URL="http://$(minikube ip):30081"
+    BACKEND_URL="http://localhost:30080"
+    FRONTEND_URL="http://localhost:30081"
     
     echo ""
     echo "[DONE] Buggy Green deployed!"

@@ -157,8 +157,6 @@ cmd_setup() {
 cmd_green() {
     print_header "SWITCHING TRAFFIC TO GREEN (WORKING)"
     
-    eval $(minikube docker-env)
-    
     print_step "1" "Ensuring Green uses working image"
     kubectl set image deployment/devops-el-green devops-el=backend:green -n backend 2>/dev/null || true
     print_done "Green image set to working version"
@@ -174,13 +172,14 @@ cmd_green() {
         -n backend
     print_done "Traffic switched to Green"
     
-    FRONTEND_URL="http://$(minikube ip):30081"
+    FRONTEND_URL="http://localhost:30081"
     
     print_header "SWITCH COMPLETE"
     echo ""
     echo "Current deployment: GREEN (working)"
     echo "Frontend shows: GREEN theme (login form with green gradient)"
     echo "Frontend URL: $FRONTEND_URL"
+    echo "Service selector: $(kubectl get svc devops-el-lb -n backend -o jsonpath='{.spec.selector.color}')"
     echo ""
     echo "Next steps:"
     echo "  - Run './demo.sh buggy' to deploy buggy version"
@@ -195,8 +194,6 @@ cmd_green() {
 cmd_buggy() {
     print_header "DEPLOYING BUGGY GREEN VERSION"
     
-    eval $(minikube docker-env)
-    
     print_step "1" "Updating Green deployment with buggy image"
     kubectl set image deployment/devops-el-green devops-el=backend:green-buggy -n backend
     kubectl scale deployment/devops-el-green --replicas=1 -n backend
@@ -209,7 +206,7 @@ cmd_buggy() {
         -n backend
     print_done "Traffic switched to buggy Green"
     
-    FRONTEND_URL="http://$(minikube ip):30081"
+    FRONTEND_URL="http://localhost:30081"
     
     print_header "BUGGY GREEN DEPLOYED"
     echo ""
@@ -240,7 +237,7 @@ cmd_rollback() {
     kubectl scale deployment/devops-el-green --replicas=0 -n backend
     print_done "Green deployment scaled down"
     
-    FRONTEND_URL="http://$(minikube ip):30081"
+    FRONTEND_URL="http://localhost:30081"
     
     print_header "ROLLBACK COMPLETE"
     echo ""
