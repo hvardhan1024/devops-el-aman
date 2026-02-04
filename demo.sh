@@ -144,6 +144,10 @@ cmd_setup() {
     echo "  3. Run './demo.sh buggy' to deploy buggy version"
     echo "  4. Run './monitor.sh' to trigger auto-rollback"
     echo ""
+    echo "If you need Windows browser access, run this in a WSL terminal and keep it open:" 
+    echo "  kubectl port-forward -n frontend svc/frontend-lb 30081:80 --address 0.0.0.0" 
+    echo "Then open http://localhost:30081 on Windows (backend at http://localhost:30080/api/status if you also forward backend)."
+    echo ""
 }
 
 # -----------------------------------------------------------------------------
@@ -325,6 +329,49 @@ cmd_health() {
 }
 
 # -----------------------------------------------------------------------------
+# Port-forward to host (Windows access)
+# -----------------------------------------------------------------------------
+
+cmd_portfw() {
+    print_header "STARTING PORT-FORWARD (frontend/backend to localhost)"
+
+    echo "This will expose services to http://localhost:30081 (frontend) and http://localhost:30080 (backend)."
+    echo "Press Ctrl+C to stop when done."
+    echo ""
+
+    # Ensure namespaces exist to avoid noisy errors
+    kubectl get svc devops-el-lb -n backend >/dev/null 2>&1 || {
+        print_error "Backend service not found. Run './demo.sh setup' first."
+        exit 1
+    }
+    kubectl get svc frontend-lb -n frontend >/dev/null 2>&1 || {
+        print_error "Frontend service not found. Run './demo.sh setup' first."
+        exit 1
+    }
+
+    # Run port-forwards in foreground (user can Ctrl+C)
+    echo "Forwarding frontend to localhost:30081 ..."
+    kubectl port-forward -n frontend svc/frontend-lb 30081:80 --address 0.0.0.0 &
+    FRONT_PF_PID=$!
+
+    echo "Forwarding backend to localhost:30080 ..."
+    kubectl port-forward -n backend svc/devops-el-lb 30080:80 --address 0.0.0.0 &
+    BACK_PF_PID=$!
+
+    echo ""
+    echo "Port-forwards running. Hit Ctrl+C to stop both."
+    echo "Frontend: http://localhost:30081"
+    echo "Backend : http://localhost:30080/api/status"
+    echo ""
+
+    # Trap Ctrl+C to cleanly kill background port-forwards
+    trap 'echo "Stopping port-forwards..."; kill $FRONT_PF_PID $BACK_PF_PID 2>/dev/null; exit 0' INT TERM
+
+    # Wait on both pids
+    wait $FRONT_PF_PID $BACK_PF_PID
+}
+
+# -----------------------------------------------------------------------------
 # Clean Command
 # -----------------------------------------------------------------------------
 
@@ -363,6 +410,7 @@ usage() {
     echo "  status    Show current deployment status"
     echo "  health    Run health checks on backend"
     echo "  clean     Remove all deployed resources"
+    echo "  portfw    Start port-forward to expose frontend/backend on localhost"
     echo ""
     echo "Demo Flow (Recommended):"
     echo "  1. ./demo.sh setup     - Deploy Blue (initial)"
@@ -404,6 +452,9 @@ case "${1:-}" in
         ;;
     clean)
         cmd_clean
+        ;;
+    portfw)
+        cmd_portfw
         ;;
     *)
         usage
