@@ -417,25 +417,56 @@ cmd_portfw() {
     }
 
     # Run port-forwards in foreground (user can Ctrl+C)
-    echo "Forwarding frontend to localhost:30081 ..."
-    kubectl port-forward -n frontend svc/frontend-lb 30081:80 --address 0.0.0.0 &
-    FRONT_PF_PID=$!
+    start_port_forwards() {
+        echo "Forwarding frontend to localhost:30081 ..."
+        kubectl port-forward -n frontend svc/frontend-lb 30081:80 --address 0.0.0.0 2>/dev/null &
+        FRONT_PF_PID=$!
 
-    echo "Forwarding backend to localhost:30080 ..."
-    kubectl port-forward -n backend svc/devops-el-lb 30080:80 --address 0.0.0.0 &
-    BACK_PF_PID=$!
+        echo "Forwarding backend to localhost:30080 ..."
+        kubectl port-forward -n backend svc/devops-el-lb 30080:80 --address 0.0.0.0 2>/dev/null &
+        BACK_PF_PID=$!
+    }
+
+    stop_port_forwards() {
+        kill $FRONT_PF_PID $BACK_PF_PID 2>/dev/null
+        wait $FRONT_PF_PID $BACK_PF_PID 2>/dev/null
+    }
+
+    start_port_forwards
 
     echo ""
-    echo "Port-forwards running. Hit Ctrl+C to stop both."
+    echo "Port-forwards running."
     echo "Frontend: http://localhost:30081"
     echo "Backend : http://localhost:30080/api/status"
     echo ""
+    echo "Press 'r' to restart port-forwards (after green/buggy/rollback)"
+    echo "Press 'q' or Ctrl+C to quit"
+    echo ""
 
     # Trap Ctrl+C to cleanly kill background port-forwards
-    trap 'echo "Stopping port-forwards..."; kill $FRONT_PF_PID $BACK_PF_PID 2>/dev/null; exit 0' INT TERM
+    trap 'echo "Stopping port-forwards..."; stop_port_forwards; exit 0' INT TERM
 
-    # Wait on both pids
-    wait $FRONT_PF_PID $BACK_PF_PID
+    # Read keys in a loop
+    while true; do
+        read -rsn1 key
+        case "$key" in
+            r|R)
+                echo ""
+                echo "[RESTART] Restarting port-forwards..."
+                stop_port_forwards
+                sleep 1
+                start_port_forwards
+                echo "[RESTART] Done! Port-forwards restarted."
+                echo ""
+                ;;
+            q|Q)
+                echo ""
+                echo "Stopping port-forwards..."
+                stop_port_forwards
+                exit 0
+                ;;
+        esac
+    done
 }
 
 # -----------------------------------------------------------------------------

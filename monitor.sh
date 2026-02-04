@@ -57,12 +57,18 @@ if [ "$error_count" -ge 3 ]; then
   echo "[ALERT] Backend is UNHEALTHY! Initiating automatic rollback..."
   echo ""
   
-  echo "[ROLLBACK] Step 1: Switching traffic to BLUE deployment"
+  echo "[ROLLBACK] Step 1: Scaling up BLUE deployment"
+  kubectl scale deployment/devops-el-blue --replicas=1 -n backend
+  
+  echo "[ROLLBACK] Step 2: Waiting for BLUE to be ready..."
+  kubectl rollout status deployment/devops-el-blue -n backend --timeout=60s
+  
+  echo "[ROLLBACK] Step 3: Switching traffic to BLUE deployment"
   kubectl patch svc devops-el-lb \
-    -p '{"spec":{"selector":{"color":"blue"}}}' \
+    -p '{"spec":{"selector":{"app":"devops-el","color":"blue"}}}' \
     -n backend
   
-  echo "[ROLLBACK] Step 2: Scaling down GREEN deployment"
+  echo "[ROLLBACK] Step 4: Scaling down GREEN deployment"
   kubectl scale deployment/devops-el-green --replicas=0 -n backend
   
   echo ""
@@ -72,6 +78,9 @@ if [ "$error_count" -ge 3 ]; then
   echo ""
   echo "[INFO] Frontend will now show BLUE theme (auto-refresh in 3s)"
   echo "[INFO] Frontend URL: $FRONTEND_URL"
+  echo ""
+  echo "⚠️  RESTART port-forward if using it:"
+  echo "    ./demo.sh portfw"
 else
   echo "[OK] Backend is healthy. No rollback required."
 fi

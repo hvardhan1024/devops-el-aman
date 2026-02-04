@@ -32,7 +32,7 @@ const server = http.createServer((req, res) => {
     }
 
     res.writeHead(200, headers)
-    res.end(`Hello from Blue-Green Demo ${VERSION}! Color: ${COLOR} | Time: ${new Date().toISOString()}`)
+    res.end(`Hello from DevOps Demo ${VERSION}! Color: ${COLOR} | Time: ${new Date().toISOString()}`)
 })
 
 server.listen(3000, () => console.log(`${COLOR} ${VERSION} running on port 3000`))
