@@ -1,0 +1,36 @@
+---
+- name: Rollback - Switch back to Blue
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    namespace: "backend"
+    service_name: "devops-el-lb"
+
+  tasks:
+    - name: Switch traffic back to Blue
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ namespace }}"
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ service_name }}"
+          spec:
+            selector:
+              app: devops-el
+              color: blue
+
+    - name: Scale down Green deployment
+      kubernetes.core.k8s_scale:
+        api_version: apps/v1
+        kind: Deployment
+        name: devops-el-green
+        namespace: "{{ namespace }}"
+        replicas: 0
+
+    - name: Display success message
+      debug:
+        msg: "✅ Rolled back to BLUE deployment"

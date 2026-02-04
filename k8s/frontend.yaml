@@ -1,0 +1,42 @@
+# Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-blue
+  namespace: frontend
+  labels:
+    app: frontend
+    color: blue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+      color: blue
+  template:
+    metadata:
+      labels:
+        app: frontend
+        color: blue
+    spec:
+      containers:
+        - name: frontend
+          image: harshavardhan873/frontend:v1
+          ports:
+            - containerPort: 80
+          imagePullPolicy: Always
+---
+# Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-lb
+  namespace: frontend
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+    color: blue
+  ports:
+    - port: 80
+      targetPort: 80

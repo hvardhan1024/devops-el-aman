@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>DevOps Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            transition: background 0.5s ease;
+        }
+
+        .theme-blue {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 50%, #1a365d 100%);
+        }
+
+        .theme-green {
+            background: linear-gradient(135deg, #1a4d2e 0%, #2d6a4f 50%, #1b4332 100%);
+        }
+
+        .theme-error {
+            background: linear-gradient(135deg, #5c1a1a 0%, #7f1d1d 50%, #4a1515 100%);
+        }
+
+        .theme-loading {
+            background: linear-gradient(135deg, #374151 0%, #4b5563 50%, #1f2937 100%);
+        }
+
+        .login-panel {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            padding: 40px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .login-card h1 {
+            font-size: 24px;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .login-card p {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #4a5568;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #4299e1;
+        }
+
+        .theme-green .form-group input:focus {
+            border-color: #38a169;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-primary {
+            background: #2c5282;
+            color: white;
+        }
+
+        .theme-green .btn-primary {
+            background: #276749;
+        }
+
+        .theme-error .btn-primary {
+            background: #9b2c2c;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .form-footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #718096;
+        }
+
+        .form-footer a {
+            color: #2c5282;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .theme-green .form-footer a {
+            color: #276749;
+        }
+
+        .status-panel {
+            width: 360px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 40px 30px;
+            display: flex;
+            flex-direction: column;
+            color: white;
+        }
+
+        .status-panel h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .status-item {
+            margin-bottom: 24px;
+        }
+
+        .status-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 8px;
+        }
+
+        .status-value {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-dot.blue {
+            background: #63b3ed;
+            box-shadow: 0 0 8px #63b3ed;
+        }
+
+        .status-dot.green {
+            background: #68d391;
+            box-shadow: 0 0 8px #68d391;
+        }
+
+        .status-dot.healthy {
+            background: #68d391;
+            box-shadow: 0 0 8px #68d391;
+        }
+
+        .status-dot.error {
+            background: #fc8181;
+            box-shadow: 0 0 8px #fc8181;
+        }
+
+        .status-dot.loading {
+            background: #a0aec0;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        .status-text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .version-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .version-badge.blue {
+            background: rgba(99, 179, 237, 0.2);
+            color: #90cdf4;
+        }
+
+        .version-badge.green {
+            background: rgba(104, 211, 145, 0.2);
+            color: #9ae6b4;
+        }
+
+        .version-badge.error {
+            background: rgba(252, 129, 129, 0.2);
+            color: #feb2b2;
+        }
+
+        .timestamp {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .status-panel {
+                width: 100%;
+                order: -1;
+            }
+        }
+    </style>
+</head>
+
+<body class="theme-loading">
+    <div class="login-panel">
+        <div class="login-card">
+            <h1>Welcome Back</h1>
+            <p>Sign in to access the DevOps dashboard</p>
+            <form onsubmit="return false;">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" placeholder="you@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" placeholder="Enter your password">
+                </div>
+                <button type="submit" class="btn btn-primary">Sign In</button>
+            </form>
+            <div class="form-footer">
+                Don't have an account? <a href="#">Sign up</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-panel">
+        <h2>Deployment Status</h2>
+        <div class="status-item">
+            <div class="status-label">Active Version</div>
+            <div class="status-value">
+                <span id="version-badge" class="version-badge">Loading...</span>
+            </div>
+        </div>
+        <div class="status-item">
+            <div class="status-label">Health Check</div>
+            <div class="status-value">
+                <span id="health-dot" class="status-dot loading"></span>
+                <span id="health-text" class="status-text">Checking...</span>
+            </div>
+        </div>
+        <div class="status-item">
+            <div class="status-label">API Status</div>
+            <div class="status-value">
+                <span id="api-dot" class="status-dot loading"></span>
+                <span id="api-text" class="status-text">Checking...</span>
+            </div>
+        </div>
+        <div class="timestamp">
+            Last updated: <span id="timestamp">--:--:--</span>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'http://192.168.49.2:30080';
+
+        async function fetchStatus() {
+            const t = Date.now();
+            let isBlue = true;
+            let hasError = false;
+
+            try {
+                const versionRes = await fetch(BACKEND_URL + '/?t=' + t);
+                const versionText = await versionRes.text();
+                isBlue = versionText.toLowerCase().includes('v1') || versionText.toLowerCase().includes('blue');
+
+                const badge = document.getElementById('version-badge');
+                badge.textContent = isBlue ? 'BLUE v1' : 'GREEN v2';
+                badge.className = 'version-badge ' + (isBlue ? 'blue' : 'green');
+
+                const healthRes = await fetch(BACKEND_URL + '/health?t=' + t);
+                const healthText = await healthRes.text();
+                document.getElementById('health-text').textContent = healthText;
+                document.getElementById('health-dot').className = 'status-dot ' + (healthRes.ok ? 'healthy' : 'error');
+
+                const apiRes = await fetch(BACKEND_URL + '/api/status?t=' + t);
+
+                if (apiRes.ok) {
+                    document.getElementById('api-text').textContent = 'OK';
+                    document.getElementById('api-dot').className = 'status-dot healthy';
+                } else {
+                    hasError = true;
+                    document.getElementById('api-text').textContent = 'Error ' + apiRes.status;
+                    document.getElementById('api-dot').className = 'status-dot error';
+                }
+
+                if (hasError) {
+                    document.body.className = 'theme-error';
+                } else if (isBlue) {
+                    document.body.className = 'theme-blue';
+                } else {
+                    document.body.className = 'theme-green';
+                }
+
+                document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
+
+            } catch (err) {
+                document.body.className = 'theme-error';
+                document.getElementById('version-badge').textContent = 'OFFLINE';
+                document.getElementById('version-badge').className = 'version-badge error';
+                document.getElementById('health-text').textContent = 'Unreachable';
+                document.getElementById('health-dot').className = 'status-dot error';
+                document.getElementById('api-text').textContent = 'Connection failed';
+                document.getElementById('api-dot').className = 'status-dot error';
+                document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
+            }
+        }
+
+        fetchStatus();
+        setInterval(fetchStatus, 3000);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,70 @@
+# Backend Blue Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-el-blue
+  namespace: backend
+  labels:
+    app: devops-el
+    color: blue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devops-el
+      color: blue
+  template:
+    metadata:
+      labels:
+        app: devops-el
+        color: blue
+    spec:
+      containers:
+        - name: devops-el
+          image: harshavardhan873/backend:blue
+          ports:
+            - containerPort: 3000
+          imagePullPolicy: Always
+---
+# Backend Green Deployment (Initially scaled to 0)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-el-green
+  namespace: backend
+  labels:
+    app: devops-el
+    color: green
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: devops-el
+      color: green
+  template:
+    metadata:
+      labels:
+        app: devops-el
+        color: green
+    spec:
+      containers:
+        - name: devops-el
+          image: harshavardhan873/backend:green
+          ports:
+            - containerPort: 3000
+          imagePullPolicy: Always
+---
+# Backend Service - Points to Blue by default
+apiVersion: v1
+kind: Service
+metadata:
+  name: devops-el-lb
+  namespace: backend
+spec:
+  type: LoadBalancer
+  selector:
+    app: devops-el
+    color: blue
+  ports:
+    - port: 80
+      targetPort: 3000
