@@ -10,8 +10,8 @@ echo "  HEALTH MONITOR - Auto Rollback System"
 echo "============================================================"
 echo ""
 
-BACKEND_URL=$(minikube service devops-el-lb --url -n backend 2>/dev/null | head -1)
-FRONTEND_URL=$(minikube service frontend-lb --url -n frontend 2>/dev/null | head -1)
+BACKEND_URL="http://$(minikube ip):30080"
+FRONTEND_URL="http://$(minikube ip):30081"
 
 if [ -z "$BACKEND_URL" ]; then
   echo "[ERROR] Failed to fetch backend service URL"

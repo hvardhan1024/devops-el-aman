@@ -110,7 +110,7 @@ cmd_setup() {
     print_done "Backend deployed"
     
     print_step "8" "Getting backend URL"
-    BACKEND_URL=$(minikube service devops-el-lb -n backend --url 2>/dev/null | head -1)
+    BACKEND_URL="http://$(minikube ip):30080"
     echo "Backend URL: $BACKEND_URL"
     
     print_step "9" "Updating frontend configuration"
@@ -128,7 +128,7 @@ cmd_setup() {
     wait_for_deployment "frontend-blue" "frontend"
     print_done "Frontend deployed"
     
-    FRONTEND_URL=$(minikube service frontend-lb -n frontend --url 2>/dev/null | head -1)
+    FRONTEND_URL="http://$(minikube ip):30081"
     
     print_header "SETUP COMPLETE"
     echo ""
@@ -282,8 +282,8 @@ cmd_status() {
     
     echo "URLs:"
     echo "-----"
-    BACKEND_URL=$(minikube service devops-el-lb -n backend --url 2>/dev/null | head -1 || echo "unavailable")
-    FRONTEND_URL=$(minikube service frontend-lb -n frontend --url 2>/dev/null | head -1 || echo "unavailable")
+    BACKEND_URL="http://$(minikube ip):30080"
+    FRONTEND_URL="http://$(minikube ip):30081"
     echo "  Backend:  $BACKEND_URL"
     echo "  Frontend: $FRONTEND_URL"
     echo ""
@@ -296,7 +296,7 @@ cmd_status() {
 cmd_health() {
     print_header "HEALTH CHECK"
     
-    BACKEND_URL=$(minikube service devops-el-lb -n backend --url 2>/dev/null | head -1)
+    BACKEND_URL="http://$(minikube ip):30080"
     
     if [ -z "$BACKEND_URL" ]; then
         print_error "Cannot get backend URL. Is the deployment running?"

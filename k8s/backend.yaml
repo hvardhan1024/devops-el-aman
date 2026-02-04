@@ -61,10 +61,11 @@ metadata:
   name: devops-el-lb
   namespace: backend
 spec:
-  type: LoadBalancer
+  type: NodePort
   selector:
     app: devops-el
     color: blue
   ports:
     - port: 80
       targetPort: 3000
+      nodePort: 30080
