@@ -40,6 +40,42 @@ wait_for_deployment() {
     kubectl rollout status deployment/$deployment -n $namespace --timeout=120s
 }
 
+wait_for_content() {
+    local url=$1
+    local expect=$2
+    local label=$3
+    local attempts=20
+    for i in $(seq 1 $attempts); do
+        local body
+        body=$(curl -s --max-time 3 "$url" || true)
+        if echo "$body" | grep -qi "$expect"; then
+            echo "  [OK] $label matched '$expect' (attempt $i)"
+            return 0
+        fi
+        sleep 1
+    done
+    print_error "Timed out waiting for $label to contain '$expect'"
+    exit 1
+}
+
+wait_for_status_code() {
+    local url=$1
+    local code=$2
+    local label=$3
+    local attempts=20
+    for i in $(seq 1 $attempts); do
+        local rc
+        rc=$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "$url" || true)
+        if [ "$rc" = "$code" ]; then
+            echo "  [OK] $label HTTP $rc (attempt $i)"
+            return 0
+        fi
+        sleep 1
+    done
+    print_error "Timed out waiting for $label to return HTTP $code"
+    exit 1
+}
+
 check_prerequisites() {
     print_step "0" "Checking prerequisites"
     
@@ -54,7 +90,6 @@ check_prerequisites() {
         fi
     done
     
-    if [ $missing -eq 1 ]; then
         print_error "Missing prerequisites. Please install them first."
         exit 1
     fi
@@ -175,6 +210,12 @@ cmd_green() {
     print_step "4" "Scaling down Blue deployment to avoid stale traffic"
     kubectl scale deployment/devops-el-blue --replicas=0 -n backend
     print_done "Blue scaled to 0"
+
+    print_step "5" "Verifying responses from backend"
+    BACKEND_URL="http://localhost:30080"
+    wait_for_content "${BACKEND_URL}/" "Green" "backend version"
+    wait_for_status_code "${BACKEND_URL}/api/status" "200" "api/status"
+    print_done "Backend verification complete"
     
     FRONTEND_URL="http://localhost:30081"
     
@@ -209,7 +250,17 @@ cmd_buggy() {
         -p '{"spec":{"selector":{"color":"green"}}}' \
         -n backend
     print_done "Traffic switched to buggy Green"
-    
+
+    print_step "3" "Scaling down Blue deployment to avoid stale traffic"
+    kubectl scale deployment/devops-el-blue --replicas=0 -n backend
+    print_done "Blue scaled to 0"
+
+    print_step "4" "Verifying responses from backend"
+    BACKEND_URL="http://localhost:30080"
+    wait_for_content "${BACKEND_URL}/" "Green" "backend version"
+    wait_for_status_code "${BACKEND_URL}/api/status" "500" "api/status (buggy)"
+    print_done "Backend verification complete"
+
     FRONTEND_URL="http://localhost:30081"
     
     print_header "BUGGY GREEN DEPLOYED"
@@ -241,6 +292,12 @@ cmd_rollback() {
     kubectl scale deployment/devops-el-blue --replicas=1 -n backend
     kubectl scale deployment/devops-el-green --replicas=0 -n backend
     print_done "Deployments scaled"
+
+    print_step "3" "Verifying responses from backend"
+    BACKEND_URL="http://localhost:30080"
+    wait_for_content "${BACKEND_URL}/" "Blue" "backend version"
+    wait_for_status_code "${BACKEND_URL}/api/status" "200" "api/status"
+    print_done "Backend verification complete"
     
     FRONTEND_URL="http://localhost:30081"
     
