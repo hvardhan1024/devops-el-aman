@@ -82,7 +82,9 @@ kubectl patch svc devops-el-lb -p '{"spec":{"selector":{"color":"green"}}}' -n b
 
 ## 🔑 Credentials
 
-- **Docker Hub**: harshavardhan873
+- **Docker Hub**: amanbaheti
 - **GitHub**: https://github.com/hvardhan1024/devops-el
+
 # devops-el
+
 # devops-el-aman

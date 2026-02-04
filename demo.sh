@@ -1,12 +1,11 @@
 #!/bin/bash
 #
-# Blue-Green Deployment Demo
-# Usage: ./demo.sh [setup|blue|green|rollback|status|clean]
+# Blue-Green Deployment Demo (Local Minikube - No Docker Hub)
+# Usage: ./demo.sh [setup|green|buggy|rollback|status|health|clean]
 #
 
 set -e
 
-DOCKER_USER="harshavardhan873"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # -----------------------------------------------------------------------------
@@ -76,51 +75,54 @@ cmd_setup() {
     if minikube status >/dev/null 2>&1; then
         echo "Minikube already running"
     else
-        minikube start
+        minikube start --driver=docker
     fi
     print_done "Minikube is running"
     
-    print_step "2" "Creating Kubernetes namespaces"
+    print_step "2" "Configuring Docker to use Minikube's daemon"
+    eval $(minikube docker-env)
+    print_done "Docker configured for Minikube"
+    
+    print_step "3" "Creating Kubernetes namespaces"
     kubectl create namespace backend --dry-run=client -o yaml | kubectl apply -f -
     kubectl create namespace frontend --dry-run=client -o yaml | kubectl apply -f -
     print_done "Namespaces created"
     
-    print_step "3" "Building Blue backend image"
+    print_step "4" "Building Blue backend image"
     cd "$SCRIPT_DIR/backend-blue"
-    docker build -t ${DOCKER_USER}/backend:blue . --quiet
+    docker build -t backend:blue . --quiet
     print_done "Blue backend image built"
     
-    print_step "4" "Building Green backend image"
+    print_step "5" "Building Green backend image"
     cd "$SCRIPT_DIR/backend-green"
-    docker build -t ${DOCKER_USER}/backend:green . --quiet
+    docker build -t backend:green . --quiet
     print_done "Green backend image built"
     
-    print_step "5" "Pushing images to Docker Hub"
-    docker push ${DOCKER_USER}/backend:blue --quiet
-    docker push ${DOCKER_USER}/backend:green --quiet
-    print_done "Images pushed to Docker Hub"
+    print_step "6" "Building Buggy Green backend image"
+    cd "$SCRIPT_DIR/backend-green-buggy"
+    docker build -t backend:green-buggy . --quiet
+    print_done "Buggy Green backend image built"
     
-    print_step "6" "Deploying backend to Kubernetes"
+    print_step "7" "Deploying backend to Kubernetes"
     cd "$SCRIPT_DIR"
     kubectl apply -f k8s/backend.yaml
     wait_for_deployment "devops-el-blue" "backend"
     print_done "Backend deployed"
     
-    print_step "7" "Getting backend URL"
+    print_step "8" "Getting backend URL"
     BACKEND_URL=$(minikube service devops-el-lb -n backend --url 2>/dev/null | head -1)
     echo "Backend URL: $BACKEND_URL"
     
-    print_step "8" "Updating frontend configuration"
+    print_step "9" "Updating frontend configuration"
     sed -i "s|const BACKEND_URL = '.*'|const BACKEND_URL = '${BACKEND_URL}'|" "$SCRIPT_DIR/frontend/index.html"
     print_done "Frontend configured with backend URL"
     
-    print_step "9" "Building frontend image"
+    print_step "10" "Building frontend image"
     cd "$SCRIPT_DIR/frontend"
-    docker build -t ${DOCKER_USER}/frontend:v1 . --quiet
-    docker push ${DOCKER_USER}/frontend:v1 --quiet
-    print_done "Frontend image built and pushed"
+    docker build -t frontend:v1 . --quiet
+    print_done "Frontend image built"
     
-    print_step "10" "Deploying frontend to Kubernetes"
+    print_step "11" "Deploying frontend to Kubernetes"
     cd "$SCRIPT_DIR"
     kubectl apply -f k8s/frontend.yaml
     wait_for_deployment "frontend-blue" "frontend"
@@ -151,8 +153,10 @@ cmd_setup() {
 cmd_green() {
     print_header "SWITCHING TRAFFIC TO GREEN (WORKING)"
     
+    eval $(minikube docker-env)
+    
     print_step "1" "Ensuring Green uses working image"
-    kubectl set image deployment/devops-el-green devops-el=${DOCKER_USER}/backend:green -n backend 2>/dev/null || true
+    kubectl set image deployment/devops-el-green devops-el=backend:green -n backend 2>/dev/null || true
     print_done "Green image set to working version"
     
     print_step "2" "Scaling up Green deployment"
@@ -177,6 +181,41 @@ cmd_green() {
     echo "Next steps:"
     echo "  - Run './demo.sh buggy' to deploy buggy version"
     echo "  - Run './demo.sh rollback' to switch back to Blue"
+    echo ""
+}
+
+# -----------------------------------------------------------------------------
+# Deploy Buggy Green
+# -----------------------------------------------------------------------------
+
+cmd_buggy() {
+    print_header "DEPLOYING BUGGY GREEN VERSION"
+    
+    eval $(minikube docker-env)
+    
+    print_step "1" "Updating Green deployment with buggy image"
+    kubectl set image deployment/devops-el-green devops-el=backend:green-buggy -n backend
+    kubectl scale deployment/devops-el-green --replicas=1 -n backend
+    wait_for_deployment "devops-el-green" "backend"
+    print_done "Buggy Green deployed"
+    
+    print_step "2" "Switching traffic to buggy Green"
+    kubectl patch svc devops-el-lb \
+        -p '{"spec":{"selector":{"color":"green"}}}' \
+        -n backend
+    print_done "Traffic switched to buggy Green"
+    
+    FRONTEND_URL=$(minikube service frontend-lb -n frontend --url 2>/dev/null | head -1)
+    
+    print_header "BUGGY GREEN DEPLOYED"
+    echo ""
+    echo "The /api/status endpoint now returns HTTP 500"
+    echo ""
+    echo "Watch the frontend - it should turn RED (error theme)"
+    echo "Frontend URL: $FRONTEND_URL"
+    echo ""
+    echo "Now run the monitor to detect and auto-rollback:"
+    echo "  ./monitor.sh"
     echo ""
 }
 
@@ -251,26 +290,6 @@ cmd_status() {
 }
 
 # -----------------------------------------------------------------------------
-# Clean Command
-# -----------------------------------------------------------------------------
-
-cmd_clean() {
-    print_header "CLEANING UP RESOURCES"
-    
-    print_step "1" "Deleting namespaces"
-    kubectl delete namespace backend --ignore-not-found=true
-    kubectl delete namespace frontend --ignore-not-found=true
-    print_done "Namespaces deleted"
-    
-    print_step "2" "Removing local images"
-    docker rmi ${DOCKER_USER}/backend:blue ${DOCKER_USER}/backend:green ${DOCKER_USER}/frontend:v1 2>/dev/null || true
-    print_done "Local images removed"
-    
-    print_header "CLEANUP COMPLETE"
-    echo ""
-}
-
-# -----------------------------------------------------------------------------
 # Health Check
 # -----------------------------------------------------------------------------
 
@@ -306,56 +325,38 @@ cmd_health() {
 }
 
 # -----------------------------------------------------------------------------
-# Usage
+# Clean Command
 # -----------------------------------------------------------------------------
 
-# -----------------------------------------------------------------------------
-# Deploy Buggy Green (for rollback demo)
-# -----------------------------------------------------------------------------
-
-cmd_buggy() {
-    print_header "DEPLOYING BUGGY GREEN VERSION"
+cmd_clean() {
+    print_header "CLEANING UP RESOURCES"
     
-    print_step "1" "Building buggy Green backend"
-    cd "$SCRIPT_DIR/backend-green-buggy"
-    docker build -t ${DOCKER_USER}/backend:green-buggy . --quiet
-    docker push ${DOCKER_USER}/backend:green-buggy --quiet
-    print_done "Buggy Green image built and pushed"
+    print_step "1" "Deleting namespaces"
+    kubectl delete namespace backend --ignore-not-found=true
+    kubectl delete namespace frontend --ignore-not-found=true
+    print_done "Namespaces deleted"
     
-    print_step "2" "Updating Green deployment with buggy image"
-    kubectl set image deployment/devops-el-green devops-el=${DOCKER_USER}/backend:green-buggy -n backend
-    kubectl scale deployment/devops-el-green --replicas=1 -n backend
-    wait_for_deployment "devops-el-green" "backend"
-    print_done "Buggy Green deployed"
+    print_step "2" "Removing local images from Minikube"
+    eval $(minikube docker-env)
+    docker rmi backend:blue backend:green backend:green-buggy frontend:v1 2>/dev/null || true
+    print_done "Local images removed"
     
-    print_step "3" "Switching traffic to buggy Green"
-    kubectl patch svc devops-el-lb \
-        -p '{"spec":{"selector":{"color":"green"}}}' \
-        -n backend
-    print_done "Traffic switched to buggy Green"
-    
-    FRONTEND_URL=$(minikube service frontend-lb -n frontend --url 2>/dev/null | head -1)
-    
-    print_header "BUGGY GREEN DEPLOYED"
-    echo ""
-    echo "The /api/status endpoint now returns HTTP 500"
-    echo ""
-    echo "Watch the frontend - it should turn RED (error theme)"
-    echo "Frontend URL: $FRONTEND_URL"
-    echo ""
-    echo "Now run the monitor to detect and auto-rollback:"
-    echo "  ./monitor.sh"
+    print_header "CLEANUP COMPLETE"
     echo ""
 }
 
+# -----------------------------------------------------------------------------
+# Usage
+# -----------------------------------------------------------------------------
+
 usage() {
     echo ""
-    echo "Blue-Green Deployment Demo"
+    echo "Blue-Green Deployment Demo (Local Minikube)"
     echo ""
     echo "Usage: $0 <command>"
     echo ""
     echo "Commands:"
-    echo "  setup     Initial setup - build, push, and deploy Blue version"
+    echo "  setup     Initial setup - build images and deploy Blue version"
     echo "  green     Switch traffic from Blue to Green (working)"
     echo "  buggy     Deploy buggy Green (returns 500 errors)"
     echo "  rollback  Switch traffic from Green back to Blue"

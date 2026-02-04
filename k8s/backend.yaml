@@ -21,10 +21,10 @@ spec:
     spec:
       containers:
         - name: devops-el
-          image: harshavardhan873/backend:blue
+          image: backend:blue
           ports:
             - containerPort: 3000
-          imagePullPolicy: Always
+          imagePullPolicy: Never
 ---
 # Backend Green Deployment (Initially scaled to 0)
 apiVersion: apps/v1
@@ -49,10 +49,10 @@ spec:
     spec:
       containers:
         - name: devops-el
-          image: harshavardhan873/backend:green
+          image: backend:green
           ports:
             - containerPort: 3000
-          imagePullPolicy: Always
+          imagePullPolicy: Never
 ---
 # Backend Service - Points to Blue by default
 apiVersion: v1

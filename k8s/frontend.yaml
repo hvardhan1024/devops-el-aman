@@ -21,10 +21,10 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: harshavardhan873/frontend:v1
+          image: frontend:v1
           ports:
             - containerPort: 80
-          imagePullPolicy: Always
+          imagePullPolicy: Never
 ---
 # Frontend Service
 apiVersion: v1

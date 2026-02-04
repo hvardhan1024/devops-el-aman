@@ -8,8 +8,6 @@
 #   3. Deploy buggy Green, monitor detects and rollbacks to Blue
 #
 
-DOCKER_USER="harshavardhan873"
-
 echo "============================================================"
 echo "  BLUE-GREEN DEPLOYMENT DEMO"
 echo "============================================================"
@@ -39,35 +37,44 @@ echo "    ./run-demo.sh reset    - Reset to Blue"
 echo ""
 echo "============================================================"
 
+# Use Minikube's Docker daemon
+eval $(minikube docker-env) 2>/dev/null || true
+
 case "${1:-}" in
   setup)
     echo ""
     echo "[PHASE 1] Setting up BLUE deployment..."
     echo "------------------------------------------------------------"
     
+    # Configure Docker for Minikube
+    eval $(minikube docker-env)
+    
     # Build blue
-    echo "[1/4] Building Blue backend..."
+    echo "[1/5] Building Blue backend..."
     cd backend-blue
-    docker build -t ${DOCKER_USER}/backend:blue . --quiet
-    docker push ${DOCKER_USER}/backend:blue --quiet
+    docker build -t backend:blue . --quiet
     cd ..
     
     # Build working green
-    echo "[2/4] Building Green backend (working version)..."
+    echo "[2/5] Building Green backend (working version)..."
     cd backend-green
-    docker build -t ${DOCKER_USER}/backend:green . --quiet
-    docker push ${DOCKER_USER}/backend:green --quiet
+    docker build -t backend:green . --quiet
     cd ..
     
     # Build buggy green
-    echo "[3/4] Building Green backend (buggy version)..."
+    echo "[3/5] Building Green backend (buggy version)..."
     cd backend-green-buggy
-    docker build -t ${DOCKER_USER}/backend:green-buggy . --quiet
-    docker push ${DOCKER_USER}/backend:green-buggy --quiet
+    docker build -t backend:green-buggy . --quiet
+    cd ..
+    
+    # Build frontend
+    echo "[4/5] Building Frontend..."
+    cd frontend
+    docker build -t frontend:v1 . --quiet
     cd ..
     
     # Deploy
-    echo "[4/4] Deploying to Kubernetes..."
+    echo "[5/5] Deploying to Kubernetes..."
     kubectl create namespace backend --dry-run=client -o yaml | kubectl apply -f -
     kubectl create namespace frontend --dry-run=client -o yaml | kubectl apply -f -
     kubectl apply -f k8s/backend.yaml
@@ -95,7 +102,7 @@ case "${1:-}" in
     
     # Update green deployment to use working image
     echo "[1/3] Updating Green deployment with working image..."
-    kubectl set image deployment/devops-el-green devops-el=${DOCKER_USER}/backend:green -n backend
+    kubectl set image deployment/devops-el-green devops-el=backend:green -n backend
     
     echo "[2/3] Scaling up Green deployment..."
     kubectl scale deployment/devops-el-green --replicas=1 -n backend
@@ -123,7 +130,7 @@ case "${1:-}" in
     echo "------------------------------------------------------------"
     
     echo "[1/2] Updating Green deployment with BUGGY image..."
-    kubectl set image deployment/devops-el-green devops-el=${DOCKER_USER}/backend:green-buggy -n backend
+    kubectl set image deployment/devops-el-green devops-el=backend:green-buggy -n backend
     kubectl rollout status deployment/devops-el-green -n backend --timeout=60s
     
     BACKEND_URL=$(minikube service devops-el-lb -n backend --url 2>/dev/null | head -1)
